@@ -9,8 +9,10 @@
             [
               (pkgs.python3.withPackages (python-pkgs: [
                 python-pkgs.black
+                python-pkgs.pynput
                 python-pkgs.scikit-learn
                 python-pkgs.matplotlib
+                python-pkgs.python-lsp-server
               ]))
             ];
         };
