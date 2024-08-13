@@ -24,15 +24,22 @@ type - file
     File name: `username-date-time`
     File payload: json
 
-- [ ] Capture
+- [x] Capture
 - [x] Async Capture
 - [x] Procedure
-- [ ] Output: Data File
+- [x] Output: Data File
 
 ## Data Visualization
 From the Capture file events will be displayed.
 Each Key will be displayed like a signal on a logical analyzer.
 
+### Raw
+- [x] Data Visualization
+- [x] Command line args
+- [x] Data processed
+- [x] Graph output
+
+### Features
 - [ ] Data Visualization
 - [ ] Command line args
 - [ ] Data processed
