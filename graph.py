@@ -24,10 +24,11 @@ def loadToLists(events, starttime):
     """
     keyAndTimes = {}
     for s in events:
+        timing = s[1]
+
         if s[0] in keyAndTimes.keys():
-            keyAndTimes[s[0]].append((s[1] - starttime, s[2]))
+            keyAndTimes[s[0]].append((timing, s[2]))
         else:
-            timing = s[1] - starttime
             keyAndTimes[s[0]] = [(timing, s[2])]
 
     return keyAndTimes
@@ -42,22 +43,26 @@ if "__main__" == __name__:
         Show Graph
         """,
     )
-    parser.add_argument("samples")
+    parser.add_argument("samples", nargs="+")
 
     args = vars(parser.parse_args())
 
-    with open(args["samples"], "r") as fin:
-        samples = fromJson(fin)
+    fig, axs = plt.subplots(len(args["samples"]), 1)
+    for n, sample_name in enumerate(args["samples"]):
+        with open(sample_name, "r") as fin:
+            sample = fromJson(fin)
 
-    sortedKeyEvents = loadToLists(samples["events"], samples["starttime"])
+        sortedKeyEvents = loadToLists(sample["events"], sample["starttime"])
 
-    step = 0
-    for key in sortedKeyEvents.keys():
-        x = [int(x[0]) for x in sortedKeyEvents[key]]
-        y = [int(y[1]) + step for y in sortedKeyEvents[key]]
-        plt.step(x, y, label=key)
-        step += 2
+        print("sample:{}".format(sample_name))
+        for key in sortedKeyEvents.keys():
+            x = [int(x[0]) for x in sortedKeyEvents[key]]
+            y = [int(y[1]) for y in sortedKeyEvents[key]]
+            print(key)
+            print(x)
+            print(y)
+            axs[n].plot(x, y, label=key)
 
-    plt.legend(title="keys")
+        fig.legend(title="keys")
 
     plt.show()
