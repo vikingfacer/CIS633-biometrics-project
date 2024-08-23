@@ -7,9 +7,10 @@ for dynamic keystroke  authentication
 
 # std libs
 import argparse
-from time import clock_gettime_ns, CLOCK_MONOTONIC
+import time
 from datetime import datetime
 import json
+import re
 
 # imported libs
 from pynput import keyboard
@@ -22,54 +23,62 @@ class Capturer:
     events = []
     startTime_ms = 0
 
-    def __init__(self):
+    def __init__(self, capname):
+        self.capname = capname
         self.events = []
-        startTime_ms = 0
+        self.startTime_ns = time.monotonic_ns()
 
-    def time_ms(self):
-        return clock_gettime_ns(CLOCK_MONOTONIC) / 1000
+    def write_sample(self):
+        with open(self.capname, "w") as file_cap:
+            json.dump(
+                {"starttime": self.startTime_ms, "events": self.events},
+                file_cap,
+                cls=eventEncoder,
+            )
+
+    def delta_time_ms(self):
+        return time.monotonic_ns() - self.startTime_ns
 
     def on_press(self, key):
-        if self.startTime_ms == 0:
-            self.startTime_ms = self.time_ms()
 
-        self.events.append(eventCapture_ms(str(key), self.time_ms(), keyState.PRESS))
-        try:
-            print("alphanumeric key {0} pressed".format(key.char))
-        except AttributeError:
-            print("special key {0} pressed".format(key))
+        self.events.append(
+            eventCapture_ms(str(key), self.delta_time_ms(), keyState.PRESS)
+        )
 
     def on_release(self, key):
-        self.events.append(eventCapture_ms(str(key), self.time_ms(), keyState.RELEASE))
-        print("{0} released".format(key))
+        self.events.append(
+            eventCapture_ms(str(key), self.delta_time_ms(), keyState.RELEASE)
+        )
         if key == keyboard.Key.esc:
             # Stop listener
             return False
 
 
-def procedure(cap):
+def procedure():
     # ...or, in a non-blocking fashion:
-    listener = keyboard.Listener(on_press=cap.on_press, on_release=cap.on_release)
-    listener.start()
 
     # register user
-    username = input("Input User Name: ")
+    sample_name = input("Input User Name: ")
+    time.sleep(0.5)
+
     # enter password 5 times
     password = None
-    prompt = "Input password {}/{}"
-    samples = 5
-    i = 0
-    while i < samples:
-        password_new = input(prompt.format(i, samples))
-        if password == None:
-            password = password_new
-        elif password_new == password:
-            print("Passwords matched!")
-            i += 1
-        else:
-            print("Passwords did not match please retry...")
+    prompt = "Enter text\n"
+    for x in range(0, 5):
+        cap = Capturer("{}_{}.json".format(sample_name, x))
+        listener = keyboard.Listener(on_press=cap.on_press, on_release=cap.on_release)
+        listener.start()
+        password_new = input(prompt)
+        listener.stop()
+        cap.write_sample()
 
-    return username
+
+def validate_phrase(phrase):
+    valid = False
+    special_regex = re.compile("[@_!#$%^&*()<>?/\|}{~:]")
+    if special_regex.search(phrase):
+        valid = True
+        return valid
 
 
 if "__main__" == __name__:
@@ -82,27 +91,5 @@ if "__main__" == __name__:
         Then types in password x5
         """,
     )
-    parser.add_argument("-o", "--output")
 
-    args = vars(parser.parse_args())
-
-    cap = Capturer()
-
-    username = procedure(cap)
-
-    if args["output"] == None:
-        capname = "{}-{}.json".format(
-            username, datetime.now().strftime("%m%d%y-%H%M%S")
-        )
-    else:
-        capname = args["output"]
-
-    with open(capname, "w") as file_cap:
-        json.dump(
-            {"starttime": cap.startTime_ms, "events": cap.events},
-            file_cap,
-            cls=eventEncoder,
-        )
-
-    for e in cap.events:
-        print(e)
+    procedure()
