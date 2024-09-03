@@ -3,19 +3,24 @@
 import argparse
 import json
 import statistics
+import os
+
 
 import eventCapture
 
 
-def key_hold_latency(data):
+def key_latency(data, hold_or_release):
     """
     Distance between key presses
     """
+    hold = 0
+    if hold_or_release:
+        hold = 1
 
     presses = []
     for event in data["events"]:
         event[0] = event[0].strip("'\"")
-        if int(event[2]) == 1:
+        if int(event[2]) == hold:
             presses.append(event[1])
     presses = sorted(presses)
 
@@ -87,6 +92,24 @@ def backtracking(data):
     )
 
 
+def extract_features(files, outfilename):
+    data = []
+    for file in files:
+        with open(file, "r") as fin:
+            sample = json.load(fin)
+            data.append(
+                {
+                    backtracking.__name__: backtracking(sample),
+                    key_hold.__name__: key_hold(sample),
+                    "hold_{}".format(key_latency.__name__): key_latency(sample, True),
+                    "press_{}".format(key_latency.__name__): key_latency(sample, False),
+                }
+            )
+
+        with open(outfilename, "w") as fout:
+            fout.write(json.dumps(data))
+
+
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(
@@ -95,14 +118,15 @@ if __name__ == "__main__":
         """,
     )
     parser.add_argument(
-        "samples",
+        "rawData",
     )
+    parser.add_argument("--user")
 
     args = vars(parser.parse_args())
-    with open(args["samples"], "r") as fin:
-        sample = json.load(fin)
-    print(sample)
-    print(backtracking(sample))
-    print(key_hold(sample))
-    print(key_hold_latency(sample))
-    pass
+    list_of_files = []
+    if os.path.isdir(args["rawData"]):
+        list_of_files = [args["rawData"] + x for x in os.listdir(args["rawData"])]
+    else:
+        list_of_files = [args["rawData"]]
+
+    extract_features(list_of_files, "{}_data.json".format(args["user"]))
