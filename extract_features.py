@@ -108,6 +108,7 @@ def extract_features(files, outfilename):
 
         with open(outfilename, "w") as fout:
             fout.write(json.dumps(data))
+    return data
 
 
 if __name__ == "__main__":

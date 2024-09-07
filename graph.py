@@ -44,25 +44,32 @@ if "__main__" == __name__:
         """,
     )
     parser.add_argument("samples", nargs="+")
+    parser.add_argument("-t", "--type", default="sample")
+    parser.add_argument("-x")
+    parser.add_argument("-y")
 
     args = vars(parser.parse_args())
 
-    fig, axs = plt.subplots(len(args["samples"]), 1)
-    for n, sample_name in enumerate(args["samples"]):
-        with open(sample_name, "r") as fin:
-            sample = fromJson(fin)
+    if args["type"] == "sample":
+        fig, axs = plt.subplots(len(args["samples"]), 1)
+        if len(args["samples"]) == 1:
+            axs = [axs]
+        for n, ax in enumerate(axs):
+            with open(args["samples"][n], "r") as fin:
+                sample = fromJson(fin)
 
-        sortedKeyEvents = loadToLists(sample["events"], sample["starttime"])
+            sortedKeyEvents = loadToLists(sample["events"], sample["starttime"])
 
-        print("sample:{}".format(sample_name))
-        for key in sortedKeyEvents.keys():
-            x = [int(x[0]) for x in sortedKeyEvents[key]]
-            y = [int(y[1]) for y in sortedKeyEvents[key]]
-            print(key)
-            print(x)
-            print(y)
-            axs[n].plot(x, y, label=key)
+            print("sample:{}".format(args["samples"][n]))
+            for key in sortedKeyEvents.keys():
+                x = [int(x[0]) for x in sortedKeyEvents[key]]
+                y = [int(y[1]) for y in sortedKeyEvents[key]]
+                print(key)
+                print(x)
+                print(y)
+                ax.plot(x, y, label=key)
 
-        fig.legend(title="keys")
-
+            fig.legend(title="keys")
+    elif args["type"] == "scatter":
+        plt.scatter(x, y)
     plt.show()
