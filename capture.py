@@ -78,7 +78,7 @@ def procedure(name, prompt, N):
     datafiles = []
     for x in range(0, N):
         if x > 0:
-            datafiles.append(get_sample(name, prompt + " Again...", x))
+            datafiles.append(get_sample(name, prompt + " Again: ", x))
         else:
             datafiles.append(get_sample(name, prompt, x))
     return datafiles
@@ -101,7 +101,7 @@ def collection_setup(username, capture_procedure, prompt, N):
         os.mkdir(sample_dir)
 
     with pushd(sample_dir):
-        return capture_procedure(username, prompt, N)
+        return capture_procedure(username, "Enter " + prompt + "\n", N)
 
 
 def verifyAgainstAll(CompareStat, threshold):
@@ -124,6 +124,7 @@ if "__main__" == __name__:
         """,
     )
 
+    parser.add_argument("-p", "--prompt", default="Template Text", type=str)
     parser.add_argument("-v", "--verify", default=False, action="store_true")
     parser.add_argument("-g", "--graph", default=False, action="store_true")
     parser.add_argument("--user", default=None)
@@ -137,23 +138,26 @@ if "__main__" == __name__:
         username = args["user"]
 
     if args["verify"]:
-        # verify user
         sample_dir = os.path.join(os.getcwd(), username)
+
+        # Get template_data
         with pushd(sample_dir):
-            # get template_data
             with open("{}_data.json".format(username)) as f:
                 template = json.load(f)
 
-            means, medians, ranges = getAvgMedRng(template)
+        # Get verification entry
+        list_of_data = [
+            collection_setup(username, get_sample, args["prompt"], "verify")
+        ]
 
-            list_of_data = [
-                collection_setup(
-                    username, get_sample, "Enter Verification Text", "verify"
-                )
-            ]
+        # Extract verification entry features
+        with pushd(sample_dir):
             verify_features = extract_features(
                 list_of_data, "{}_verify_data.json".format(username)
             )
+
+        # Get feature Stats of template & verification text
+        means, medians, ranges = getAvgMedRng(template)
         v_means, v_medians, v_ranges = getAvgMedRng(verify_features)
 
         stats = {
@@ -161,17 +165,21 @@ if "__main__" == __name__:
             "median": [medians, v_medians],
             "range": [ranges, v_ranges],
         }
-
+        # Verify
         verifyAgainstAll(
             stats,
             args["threshold"],
         )
+
+        # Graph
         if args["graph"] == True:
             graph_stats(stats)
     else:
-        # collect template
+        # collect template data
         sample_dir = os.path.join(os.getcwd(), username)
-        list_of_data = collection_setup(username, procedure, "Enter Template Text", 5)
+        list_of_data = collection_setup(username, procedure, args["prompt"], 5)
+
+        # Extract features from template data
         with pushd(sample_dir):
             extracted = extract_features(list_of_data, "{}_data.json".format(username))
             means, medians, ranges = getAvgMedRng(extracted)
